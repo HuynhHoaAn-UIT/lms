@@ -14,11 +14,53 @@
       <h1 id="login-title">Đăng nhập</h1>
       <button id="sso" disabled>Đăng nhập bằng Microsoft SSO</button>
     </section>
-    <section id="home" class="card" aria-labelledby="home-title" hidden>
+    <section id="home" aria-labelledby="home-title" hidden>
+      <div class="card">
       <p class="section-label">Trang chủ</p>
       <h1 id="home-title">Xin chào, <span id="name"></span></h1>
       <p id="username"></p>
       <p class="success">Bạn đã đăng nhập bằng Microsoft Entra ID.</p>
+      </div>
+      <nav class="toolbar" aria-label="Công cụ học vụ">
+        <button type="button" data-panel="classes" aria-controls="classes" aria-pressed="true">Lịch học</button>
+        <button type="button" data-panel="exams" aria-controls="exams" aria-pressed="false">Lịch thi</button>
+        <button type="button" data-panel="grades" aria-controls="grades" aria-pressed="false">Điểm thi</button>
+        <button type="button" data-panel="notices" aria-controls="notices" aria-pressed="false">Thông báo</button>
+      </nav>
+      <section id="classes" class="academic-panel">
+        <h2>Lịch học</h2>
+        <p class="sample">Dữ liệu mẫu</p>
+        <ul class="academic-list">
+          <li><strong>Thiết kế mạng</strong><span>Thứ Hai · 08:00–10:00 · Phòng B.206</span></li>
+          <li><strong>Quản trị hệ thống</strong><span>Thứ Tư · 13:00–15:00 · Phòng C.302</span></li>
+        </ul>
+      </section>
+      <section id="exams" class="academic-panel" hidden>
+        <h2>Lịch thi</h2>
+        <p class="sample">Dữ liệu mẫu</p>
+        <ul class="academic-list">
+          <li><strong>Thiết kế mạng</strong><span>14/12/2026 · 08:00 · Phòng B.206</span></li>
+          <li><strong>Quản trị hệ thống</strong><span>16/12/2026 · 13:00 · Phòng C.302</span></li>
+        </ul>
+      </section>
+      <section id="grades" class="academic-panel" hidden>
+        <h2>Điểm thi</h2>
+        <p class="sample">Dữ liệu mẫu · thang điểm 10</p>
+        <table>
+          <thead><tr><th scope="col">Môn học</th><th scope="col">Điểm thi</th></tr></thead>
+          <tbody>
+            <tr><td>Thiết kế mạng</td><td>8,5</td></tr>
+            <tr><td>Quản trị hệ thống</td><td>8,0</td></tr>
+          </tbody>
+        </table>
+      </section>
+      <section id="notices" class="academic-panel" hidden>
+        <h2>Thông báo</h2>
+        <p class="sample">Dữ liệu mẫu</p>
+        <ul class="academic-list">
+          <li><strong>Lịch thi cuối kỳ đã được công bố</strong><span>Xem giờ thi và phòng thi trong mục Lịch thi.</span></li>
+        </ul>
+      </section>
     </section>
     <p id="status" class="status" role="status"></p>
   </main>
