@@ -9,6 +9,8 @@ Demo SSO Microsoft 365 cho môn Thiết kế mạng. Hai màn hình là đăng n
 3. Trong **Authentication**, thêm platform **Single-page application** và đăng ký đúng URI `http://localhost:5173/auth-callback.html`.
 4. Sao chép `.env.example` thành `.env.local`. Điền **Application (client) ID** và **Directory (tenant) ID** từ **Overview**. Không cần client secret.
 
+Nút đăng nhập chỉ được bật khi cả hai ID có định dạng hợp lệ. Trang chủ mở sau khi MSAL nhận được tài khoản Entra hoặc khôi phục phiên đăng nhập trong tab hiện tại. Lịch học, lịch thi, điểm thi và thông báo dùng dữ liệu mẫu.
+
 ## Chạy
 
 ```powershell
