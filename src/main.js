@@ -1,5 +1,4 @@
 import { PublicClientApplication } from '@azure/msal-browser'
-import './style.css'
 
 const login = document.querySelector('#login')
 const home = document.querySelector('#home')
