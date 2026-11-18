@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Campus LMS</title>
+  <script type="module" src="/src/main.js"></script>
+</head>
+<body>
+  <header class="bar"><strong class="brand"><span>CL</span> Campus LMS</strong><button id="logout" class="secondary" hidden>Đăng xuất</button></header>
+  <main>
+    <section id="login" class="card" aria-labelledby="login-title">
+      <h1 id="login-title">Đăng nhập</h1>
+      <p>Sử dụng tài khoản Microsoft 365 của bạn.</p>
+      <button id="sso" disabled>Đăng nhập bằng Microsoft SSO</button>
+    </section>
+    <section id="home" class="card" aria-labelledby="home-title" hidden>
+      <p class="section-label">Trang chủ</p>
+      <h1 id="home-title">Xin chào, <span id="name"></span></h1>
+      <p id="username"></p>
+      <p class="success">Bạn đã đăng nhập bằng Microsoft Entra ID.</p>
+    </section>
+    <p id="status" class="status" role="status"></p>
+  </main>
+</body>
+</html>
