@@ -21,7 +21,14 @@ async function start() {
   const tenantId = import.meta.env.VITE_ENTRA_TENANT_ID?.trim()
   const guid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
   if (!guid.test(clientId) || !guid.test(tenantId)) {
-    status.textContent = 'Điền Client ID và Tenant ID trong .env.local rồi chạy lại web.'
+    if (import.meta.env.DEV && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
+      sso.textContent = 'Đăng nhập demo'
+      sso.disabled = false
+      home.querySelector('.success').textContent = 'Phiên demo'
+      sso.addEventListener('click', () => render({ name: 'Sinh viên demo' }))
+      logout.addEventListener('click', () => render(null))
+    }
+    console.warn('Campus LMS: thiếu cấu hình Entra ID hợp lệ.')
     return
   }
 
