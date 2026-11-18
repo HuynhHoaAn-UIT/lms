@@ -6,6 +6,17 @@ const sso = document.querySelector('#sso')
 const logout = document.querySelector('#logout')
 const status = document.querySelector('#status')
 
+const tools = home.querySelectorAll('[data-panel]')
+for (const button of tools) {
+  button.addEventListener('click', () => {
+    for (const item of tools) {
+      const selected = item === button
+      item.setAttribute('aria-pressed', String(selected))
+      document.getElementById(item.dataset.panel).hidden = !selected
+    }
+  })
+}
+
 function render(account) {
   login.hidden = Boolean(account)
   home.hidden = !account
@@ -21,7 +32,6 @@ async function start() {
   const guid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
   if (!guid.test(clientId) || !guid.test(tenantId)) {
     if (import.meta.env.DEV && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
-      sso.textContent = 'Đăng nhập demo'
       sso.disabled = false
       home.querySelector('.success').textContent = 'Phiên demo'
       sso.addEventListener('click', () => render({ name: 'Sinh viên demo' }))
