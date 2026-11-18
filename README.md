@@ -23,3 +23,7 @@ Mở http://localhost:5173, bấm **Đăng nhập bằng Microsoft SSO**, rồi 
 Chạy `npm run build` để tạo bản tĩnh trong `dist/`. Khi demo qua HTTPS trên AWS, thêm URI `https://TEN-MIEN/auth-callback.html` vào cùng cấu hình SPA và giữ cả hai tệp HTML khi triển khai.
 
 MSAL Browser dùng OpenID Connect Authorization Code với PKCE. `auth-callback.html` là trang kỹ thuật cho cửa sổ đăng nhập. Trang chủ hiển thị thông tin demo và không chứa dữ liệu học vụ riêng tư.
+
+## Cấu hình RDS MySQL cho backend
+
+Sao chép `backend/.env.example` thành `backend/.env`. Điền endpoint RDS, tên người dùng và mật khẩu vào các trường `xxx`. Sửa tên database và port nếu khác `lms` và `3306`. Repo hiện có sẵn mẫu cấu hình. Việc kết nối RDS sẽ thực hiện khi thêm backend.
