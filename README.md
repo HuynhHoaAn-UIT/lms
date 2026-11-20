@@ -1,29 +1,60 @@
-# Campus LMS
+# Campus LMS — demo 3 EC2
 
-Demo SSO Microsoft 365 cho môn Thiết kế mạng. Hai màn hình là đăng nhập và trang chủ. Tên hiển thị và username lấy từ tài khoản Entra đã đăng nhập.
+Một tài khoản AD dùng cho cả Wi-Fi và LMS. EC2 1 chạy AD DS + DNS, EC2 2
+chạy FreeRADIUS, EC2 3 chạy Campus LMS. Trang sinh viên hiển thị dữ liệu học
+vụ mẫu. Phiên web lưu trong bộ nhớ của tiến trình và hết hạn sau một giờ hoặc
+khi khởi động lại ứng dụng.
 
-## Cấu hình một lần
+## Chuẩn bị AD
 
-1. Cài Node.js 22.12+ hoặc Node.js 24.
-2. Trong Microsoft Entra admin center, mở **App registrations → New registration**. Chọn **Accounts in this organizational directory only**.
-3. Trong **Authentication**, thêm platform **Single-page application** và đăng ký đúng URI `http://localhost:5173/auth-callback.html`.
-4. Sao chép `.env.example` thành `.env.local`. Điền **Application (client) ID** và **Directory (tenant) ID** từ **Overview**. Không cần client secret.
+- Tạo và bật ba tài khoản `sv001`, `sv002`, `sv003`, với UPN tương ứng
+  `sv001@campus.test`, `sv002@campus.test`, `sv003@campus.test`. Bản demo
+  chỉ cho phép ba mã này đăng nhập.
+- Cài chứng chỉ LDAPS trên DC. Tên DNS của DC phải khớp chứng chỉ và phân giải
+  về IP private từ EC2 LMS. Cho phép TCP 636 từ security group của LMS tới DC.
+  Chép chứng chỉ công khai của CA cấp chứng chỉ đó vào EC2 LMS. Kiểm tra từ LMS:
 
-Nút đăng nhập chỉ được bật khi cả hai ID có định dạng hợp lệ. Trang chủ mở sau khi MSAL nhận được tài khoản Entra hoặc khôi phục phiên đăng nhập trong tab hiện tại. Lịch học, lịch thi, điểm thi và thông báo dùng dữ liệu mẫu.
+  ```bash
+  openssl s_client -connect dc01.campus.test:636 -servername dc01.campus.test \
+    -verify_hostname dc01.campus.test -verify_return_error \
+    -CAfile /etc/campus-lms/ad-ca.pem </dev/null
+  ```
 
-## Chạy
+## Chạy trên EC2 LMS
 
-```powershell
+Với Node.js 22.12+ hoặc 24:
+
+```bash
 npm ci
-npm run dev
+npm run build
+cp backend/.env.example backend/.env
+chmod 600 backend/.env
+openssl rand -hex 32
+nano backend/.env
+npm start
 ```
 
-Mở http://localhost:5173, bấm **Đăng nhập bằng Microsoft SSO**, rồi dùng tài khoản Microsoft 365 thuộc tenant đã cấu hình. Cho phép cửa sổ bật lên nếu trình duyệt chặn. Nếu sửa `.env.local`, khởi động lại Vite.
+Điền chuỗi ngẫu nhiên vừa tạo vào `SESSION_SECRET`, tên DNS thật của DC vào
+`AD_URL`, domain vào `AD_DOMAIN`, đường dẫn chứng chỉ CA vào `AD_CA_FILE`
+và URL HTTPS của LMS vào `APP_ORIGIN`. Mỗi cấu hình nằm trên một dòng.
+Ứng dụng mở tại `127.0.0.1:3000`. Trong vhost HTTPS của Nginx trên cùng EC2,
+chuyển tiếp cả trang web và API:
 
-Chạy `npm run build` để tạo bản tĩnh trong `dist/`. Khi demo qua HTTPS trên AWS, thêm URI `https://TEN-MIEN/auth-callback.html` vào cùng cấu hình SPA và giữ cả hai tệp HTML khi triển khai.
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $remote_addr;
+}
+```
 
-MSAL Browser dùng OpenID Connect Authorization Code với PKCE. `auth-callback.html` là trang kỹ thuật cho cửa sổ đăng nhập. Trang chủ hiển thị thông tin demo và không chứa dữ liệu học vụ riêng tư.
+Để thử cục bộ, đặt `APP_ORIGIN=http://localhost:3000` rồi mở
+`http://localhost:3000`. Khi dùng `npm run dev` để sửa giao diện, chạy backend
+song song và đặt `APP_ORIGIN=http://localhost:5173`.
 
-## Cấu hình RDS MySQL cho backend
+## Demo
 
-Sao chép `backend/.env.example` thành `backend/.env`. Điền endpoint RDS, tên người dùng và mật khẩu vào các trường `xxx`. Sửa tên database và port nếu khác `lms` và `3306`. Repo hiện có sẵn mẫu cấu hình. Việc kết nối RDS sẽ thực hiện khi thêm backend.
+1. Dùng `sv001` xác thực Wi-Fi qua FreeRADIUS và quan sát `Access-Accept`.
+2. Dùng cùng mã và mật khẩu ở LMS. Tải lại trang để kiểm tra phiên còn hiệu lực.
+3. Đăng xuất, rồi nhập sai mật khẩu để kiểm tra trang từ chối đăng nhập.

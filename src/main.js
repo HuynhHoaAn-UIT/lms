@@ -1,8 +1,7 @@
-import { PublicClientApplication } from '@azure/msal-browser'
-
 const login = document.querySelector('#login')
 const home = document.querySelector('#home')
-const sso = document.querySelector('#sso')
+const form = document.querySelector('#login-form')
+const submit = form.querySelector('button')
 const logout = document.querySelector('#logout')
 const status = document.querySelector('#status')
 
@@ -26,57 +25,48 @@ function render(account) {
   document.title = account ? 'Trang chủ · Campus LMS' : 'Đăng nhập · Campus LMS'
 }
 
-async function start() {
-  const clientId = import.meta.env.VITE_ENTRA_CLIENT_ID?.trim()
-  const tenantId = import.meta.env.VITE_ENTRA_TENANT_ID?.trim()
-  const guid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
-  if (!guid.test(clientId) || !guid.test(tenantId)) {
-    console.warn('Campus LMS: thiếu cấu hình Entra ID hợp lệ.')
-    return
-  }
-
-  const msal = new PublicClientApplication({
-    auth: {
-      clientId,
-      authority: 'https://login.microsoftonline.com/' + tenantId,
-      redirectUri: location.origin + '/auth-callback.html',
-      postLogoutRedirectUri: location.origin + '/',
-    },
-    cache: { cacheLocation: 'sessionStorage' },
-  })
-  await msal.initialize()
-  render(msal.getActiveAccount())
-  sso.disabled = false
-
-  sso.addEventListener('click', async () => {
-    sso.disabled = true
-    status.textContent = 'Tiếp tục đăng nhập trong cửa sổ Microsoft.'
-    try {
-      const result = await msal.loginPopup({ scopes: ['openid', 'profile'] })
-      msal.setActiveAccount(result.account)
-      render(result.account)
-      status.textContent = ''
-    } catch (error) {
-      status.textContent = 'Đăng nhập chưa hoàn tất. ' + (error.errorCode || error.message)
-    } finally {
-      sso.disabled = false
-    }
-  })
-
-  logout.addEventListener('click', async () => {
-    logout.disabled = true
-    status.textContent = ''
-    try {
-      await msal.logoutPopup({ account: msal.getActiveAccount() })
-    } catch (error) {
-      status.textContent = 'Không thể hoàn tất đăng xuất Microsoft. ' + (error.errorCode || error.message)
-    } finally {
-      render(msal.getActiveAccount())
-      logout.disabled = false
-    }
-  })
+async function api(path, options) {
+  const response = await fetch('/api/' + path, options)
+  if (response.status === 204) return
+  const result = await response.json()
+  if (!response.ok) throw new Error(result.error)
+  return result
 }
 
-start().catch((error) => {
-  status.textContent = 'Không thể khởi tạo đăng nhập Microsoft. ' + error.message
+form.addEventListener('submit', async (event) => {
+  event.preventDefault()
+  submit.disabled = true
+  status.textContent = ''
+  const credentials = Object.fromEntries(new FormData(form))
+  try {
+    const { user } = await api('login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    })
+    render(user)
+  } catch (error) {
+    status.textContent = error.message || 'Không thể đăng nhập.'
+  } finally {
+    form.elements.password.value = ''
+    submit.disabled = false
+  }
 })
+
+logout.addEventListener('click', async () => {
+  logout.disabled = true
+  status.textContent = ''
+  try {
+    await api('logout', { method: 'POST' })
+    render(null)
+  } catch {
+    status.textContent = 'Không thể đăng xuất. Vui lòng thử lại.'
+  } finally {
+    logout.disabled = false
+  }
+})
+
+api('session')
+  .then(({ user }) => render(user))
+  .catch(() => { status.textContent = 'Không thể kiểm tra phiên đăng nhập.' })
+  .finally(() => { submit.disabled = false })

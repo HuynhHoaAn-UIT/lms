@@ -6,16 +6,20 @@
   "scripts": {
     "dev": "vite --strictPort",
     "build": "vite build",
-    "preview": "vite preview --port 5173 --strictPort"
+    "preview": "vite preview --port 5173 --strictPort",
+    "start": "node --env-file=backend/.env backend/server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
-  "dependencies": {
-    "@azure/msal-browser": "5.29.1"
-  },
   "devDependencies": {
     "vite": "8.3.8"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.5",
+    "express-session": "^1.19.0",
+    "ldapts": "^9.3.1"
   }
 }

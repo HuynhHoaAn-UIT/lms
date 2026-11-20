@@ -53,3 +53,19 @@ main:has(#home:not([hidden])) {
 .academic-list span { color: #405c65; }
 .academic-panel table { width: 100%; border-collapse: collapse; text-align: left; }
 .academic-panel th, .academic-panel td { padding: 10px 6px; border-bottom: 1px solid #d0e1dc; }
+
+#login-form {
+  display: grid;
+  gap: 0.65rem;
+}
+
+#login-form input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem;
+  font: inherit;
+}
+
+#login-form button {
+  justify-self: start;
+}

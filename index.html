@@ -12,14 +12,20 @@
   <main>
     <section id="login" class="card" aria-labelledby="login-title">
       <h1 id="login-title">Đăng nhập</h1>
-      <button id="sso" disabled>Đăng nhập bằng Microsoft SSO</button>
+      <form id="login-form">
+        <label for="student-id">Mã sinh viên</label>
+        <input id="student-id" name="username" autocomplete="username" placeholder="sv001" required>
+        <label for="password">Mật khẩu</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button type="submit" disabled>Đăng nhập</button>
+      </form>
     </section>
     <section id="home" aria-labelledby="home-title" hidden>
       <div class="card">
       <p class="section-label">Trang chủ</p>
       <h1 id="home-title">Xin chào, <span id="name"></span></h1>
       <p id="username"></p>
-      <p class="success">Bạn đã đăng nhập bằng Microsoft Entra ID.</p>
+      <p class="success">Bạn đã đăng nhập bằng tài khoản trường.</p>
       </div>
       <nav class="toolbar" aria-label="Công cụ học vụ">
         <button type="button" data-panel="classes" aria-controls="classes" aria-pressed="true">Lịch học</button>
