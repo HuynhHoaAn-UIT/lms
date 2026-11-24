@@ -6,17 +6,6 @@ const sso = document.querySelector('#sso')
 const logout = document.querySelector('#logout')
 const status = document.querySelector('#status')
 
-const tools = home.querySelectorAll('[data-panel]')
-for (const button of tools) {
-  button.addEventListener('click', () => {
-    for (const item of tools) {
-      const selected = item === button
-      item.setAttribute('aria-pressed', String(selected))
-      document.getElementById(item.dataset.panel).hidden = !selected
-    }
-  })
-}
-
 function render(account) {
   login.hidden = Boolean(account)
   home.hidden = !account
@@ -30,8 +19,9 @@ async function start() {
   const clientId = import.meta.env.VITE_ENTRA_CLIENT_ID?.trim()
   const tenantId = import.meta.env.VITE_ENTRA_TENANT_ID?.trim()
   const guid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
-  if (!guid.test(clientId) || !guid.test(tenantId)) {
-    console.warn('Campus LMS: thiếu cấu hình Entra ID hợp lệ.')
+  const apiClientId = import.meta.env.VITE_ENTRA_API_CLIENT_ID?.trim()
+  if (![clientId, tenantId, apiClientId].every(id => guid.test(id))) {
+    status.textContent = 'Thiếu cấu hình Microsoft Entra ID.'
     return
   }
 
@@ -45,14 +35,23 @@ async function start() {
     cache: { cacheLocation: 'sessionStorage' },
   })
   await msal.initialize()
-  render(msal.getActiveAccount())
+  render(null)
   sso.disabled = false
 
   sso.addEventListener('click', async () => {
     sso.disabled = true
     status.textContent = 'Tiếp tục đăng nhập trong cửa sổ Microsoft.'
     try {
-      const result = await msal.loginPopup({ scopes: ['openid', 'profile'] })
+      const scope = 'api://' + apiClientId + '/LoginHistory.Write'
+      const result = await msal.loginPopup({ scopes: [scope] })
+      const response = await fetch('/api/login-history', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + result.accessToken },
+        signal: AbortSignal.timeout(15000),
+      })
+      if (!response.ok) {
+        throw new Error('Không thể xác nhận và ghi nhận lần đăng nhập.')
+      }
       msal.setActiveAccount(result.account)
       render(result.account)
       status.textContent = ''

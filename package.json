@@ -2,18 +2,20 @@
   "name": "campus-lms",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
     "dev": "vite --strictPort",
     "build": "vite build",
-    "preview": "vite preview --port 5173 --strictPort"
+    "start": "node --env-file-if-exists=backend/.env backend/server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "@azure/msal-browser": "5.29.1"
+    "@azure/msal-browser": "5.29.1",
+    "express": "^5.3.0",
+    "jose": "^6.2.18",
+    "mysql2": "^3.24.6"
   },
   "devDependencies": {
     "vite": "8.3.8"
