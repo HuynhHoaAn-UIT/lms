@@ -1,0 +1,12 @@
+{
+  "name": "campus-lms-api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node --env-file=.env server.mjs"
+  },
+  "dependencies": {
+    "jose": "6.2.18",
+    "mysql2": "3.24.6"
+  }
+}

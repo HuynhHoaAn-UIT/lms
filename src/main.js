@@ -29,8 +29,10 @@ function render(account) {
 async function start() {
   const clientId = import.meta.env.VITE_ENTRA_CLIENT_ID?.trim()
   const tenantId = import.meta.env.VITE_ENTRA_TENANT_ID?.trim()
+  const apiId = import.meta.env.VITE_ENTRA_API_CLIENT_ID?.trim()
+  const historyUrl = import.meta.env.VITE_LOGIN_API_URL?.trim() || '/api/login-history'
   const guid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
-  if (!guid.test(clientId) || !guid.test(tenantId)) {
+  if (!guid.test(clientId) || !guid.test(tenantId) || !guid.test(apiId)) {
     console.warn('Campus LMS: thiếu cấu hình Entra ID hợp lệ.')
     return
   }
@@ -52,7 +54,21 @@ async function start() {
     sso.disabled = true
     status.textContent = 'Tiếp tục đăng nhập trong cửa sổ Microsoft.'
     try {
-      const result = await msal.loginPopup({ scopes: ['openid', 'profile'] })
+      const result = await msal.loginPopup({
+        scopes: ['openid', 'profile', 'api://' + apiId + '/Login.Record'],
+      })
+      try {
+        const response = await fetch(historyUrl, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + result.accessToken },
+          redirect: 'error',
+          signal: AbortSignal.timeout(15000),
+        })
+        if (response.status !== 204) throw new Error('HTTP ' + response.status)
+      } catch {
+        status.textContent = 'Microsoft đã xác thực, nhưng LMS chưa xác nhận ghi lịch sử. Vui lòng thử lại.'
+        return
+      }
       msal.setActiveAccount(result.account)
       render(result.account)
       status.textContent = ''
