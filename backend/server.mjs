@@ -2,6 +2,8 @@ import { createServer } from 'node:http'
 import { readFileSync } from 'node:fs'
 import { createRemoteJWKSet, jwtVerify, errors } from 'jose'
 import mysql from 'mysql2/promise'
+import serveStatic from 'serve-static'
+import { fileURLToPath } from 'node:url'
 
 function required(name) {
   const value = process.env[name]
@@ -22,9 +24,19 @@ const db = mysql.createPool({
   connectionLimit: 5,
 })
 
+const serveFrontend = serveStatic(fileURLToPath(new URL('./public/', import.meta.url)), {
+  index: 'index.html', redirect: false,
+})
+
 createServer(async (req, res) => {
   function finish(code) { res.writeHead(code); res.end() }
-  if (req.url !== '/api/login-history') return finish(404)
+  if (req.method === 'GET' && req.url === '/api/config') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
+    return res.end(JSON.stringify({ clientId: client, tenantId: tenant, apiId: audience }))
+  }
+  if (req.url !== '/api/login-history') {
+    return serveFrontend(req, res, (err) => finish(err?.statusCode || 404))
+  }
   res.setHeader('Vary', 'Origin')
   if (req.headers.origin) {
     if (req.headers.origin !== origin) return finish(403)

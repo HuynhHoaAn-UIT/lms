@@ -27,9 +27,17 @@ function render(account) {
 }
 
 async function start() {
-  const clientId = import.meta.env.VITE_ENTRA_CLIENT_ID?.trim()
-  const tenantId = import.meta.env.VITE_ENTRA_TENANT_ID?.trim()
-  const apiId = import.meta.env.VITE_ENTRA_API_CLIENT_ID?.trim()
+  let clientId = import.meta.env.VITE_ENTRA_CLIENT_ID?.trim()
+  let tenantId = import.meta.env.VITE_ENTRA_TENANT_ID?.trim()
+  let apiId = import.meta.env.VITE_ENTRA_API_CLIENT_ID?.trim()
+  if (!clientId && !tenantId && !apiId) {
+    const response = await fetch('/api/config')
+    if (!response.ok) throw new Error('Thiếu cấu hình Entra cho LMS.')
+    const config = await response.json()
+    clientId = config.clientId
+    tenantId = config.tenantId
+    apiId = config.apiId
+  }
   const historyUrl = import.meta.env.VITE_LOGIN_API_URL?.trim() || '/api/login-history'
   const guid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
   if (!guid.test(clientId) || !guid.test(tenantId) || !guid.test(apiId)) {

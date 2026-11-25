@@ -38,3 +38,32 @@ FROM lms.login_history
 ORDER BY id DESC
 LIMIT 10;
 ```
+
+## EC2 + RDS với một Docker image
+
+Container phục vụ cả trang web và API trên cổng 3001. Ba client/tenant ID công khai được frontend đọc từ `/api/config` khi mở trang. Backend dùng thông tin RDS trong biến môi trường của container.
+
+Trên EC2 Ubuntu đã cài Docker, tạo file môi trường từ mẫu, giới hạn quyền đọc rồi điền các giá trị thật:
+
+```bash
+curl -fsSLo lms.env https://raw.githubusercontent.com/HuynhHoaAn-UIT/lms/main/backend/.env.example
+chmod 600 lms.env
+nano lms.env
+```
+
+Đặt `DB_HOST` bằng endpoint RDS, `DB_SSL_CA=/app/rds-ca.pem` và dùng tài khoản MySQL có quyền ghi bảng lịch sử. Kiểm tra schema đã được áp dụng theo mục RDS ở trên. Để demo qua SSH, đặt `FRONTEND_ORIGIN=http://localhost:3001` và thêm `http://localhost:3001/auth-callback.html` vào SPA redirect URI của Entra. Giữ nguyên delegated scope Login.Record của API.
+
+```bash
+curl -fsSLo rds-ca.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+docker pull ghcr.io/huynhhoaan-uit/lms:main
+docker run -d --name lms --restart unless-stopped --env-file lms.env \
+  -v "$PWD/rds-ca.pem:/app/rds-ca.pem:ro" \
+  -p 127.0.0.1:3001:3001 ghcr.io/huynhhoaan-uit/lms:main
+curl -fsS http://127.0.0.1:3001/api/config
+```
+
+Nếu package private, đăng nhập GHCR bằng tài khoản có quyền đọc package và token được cấp `read:packages` qua `docker login ghcr.io` trước khi pull. Để cố định phiên bản, dùng tag là SHA đầy đủ của commit được publish.
+
+Trên PowerShell máy cá nhân, giữ phiên `ssh -i .\key.pem -L 3001:127.0.0.1:3001 ubuntu@EC2_HOST` rồi mở http://localhost:3001. Khi cung cấp trang công khai, dùng HTTPS reverse proxy trên EC2 chuyển tiếp về 127.0.0.1:3001, đặt FRONTEND_ORIGIN theo URL HTTPS, cập nhật URI callback trong Entra và tạo lại container với cấu hình mới.
+
+Để tự build từ thư mục gốc của repo, chạy `docker build -t campus-lms:local .` rồi dùng tên image đó ở lệnh run.
