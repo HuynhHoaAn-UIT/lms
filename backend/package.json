@@ -6,7 +6,7 @@
     "start": "node --env-file=.env server.mjs"
   },
   "dependencies": {
-    "jose": "6.2.18",
+    "ldapts": "9.3.6",
     "mysql2": "3.24.6",
     "serve-static": "2.2.1"
   }

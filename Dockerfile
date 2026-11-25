@@ -2,7 +2,7 @@ FROM node:24-bookworm-slim AS frontend
 WORKDIR /build
 COPY package.json package-lock.json ./
 RUN npm ci
-COPY index.html auth-callback.html vite.config.js ./
+COPY index.html ./
 COPY src/ ./src/
 RUN npm run build
 

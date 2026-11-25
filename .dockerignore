@@ -3,8 +3,6 @@
 !package.json
 !package-lock.json
 !index.html
-!auth-callback.html
-!vite.config.js
 !src/
 !src/**
 !backend/

@@ -21,7 +21,9 @@ button { font: inherit; font-weight: 650; color: white; background: #07654f; bor
 button:hover:not(:disabled) { background: #054c3c; }
 button:disabled { opacity: .65; cursor: default; }
 button:focus-visible { outline: 3px solid #328bdd; outline-offset: 3px; }
-#sso { width: 100%; margin-top: 10px; }
+#login-form { display: grid; gap: 8px; }
+#login-form input { font: inherit; padding: 9px; border: 1px solid #98b5af; border-radius: 8px; }
+#login-form button { margin-top: 8px; }
 .secondary { border: 1px solid #a9e5ce; background: transparent; }
 .section-label { color: #07654f; font-weight: 650; }
 .success { background: #e7f6ef; color: #075743; padding: 12px 16px; border-radius: 8px; margin: 24px 0 0; }

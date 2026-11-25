@@ -1,69 +1,61 @@
 # Campus LMS
 
-Demo SSO Microsoft 365 cho môn Thiết kế mạng. Hai màn hình là đăng nhập và trang chủ. Tên hiển thị và username lấy từ tài khoản Entra đã đăng nhập.
+Ứng dụng demo dùng cùng tài khoản Windows AD `CAMPUS` cho Wi-Fi và LMS. Người
+dùng nhập mã tài khoản, ví dụ `24520055`, và mật khẩu AD. Backend xác thực qua
+LDAPS, ghi một dòng vào RDS rồi mới mở phiên web. Trang chủ hiển thị dữ liệu
+học vụ mẫu.
 
-## Cấu hình một lần
+## Chuẩn bị
 
-1. Cài Node.js 22.12+ hoặc Node.js 24.
-2. Trong Microsoft Entra admin center, mở **App registrations → New registration**. Chọn **Accounts in this organizational directory only**.
-3. Trong **Authentication**, thêm platform **Single-page application** và đăng ký đúng URI `http://localhost:5173/auth-callback.html`.
-4. Sao chép `.env.example` thành `.env.local`. Điền **Application (client) ID** và **Directory (tenant) ID** từ **Overview**. Không cần client secret.
+- **AD**: DC cần chứng chỉ LDAPS được tin cậy, với tên DNS khớp chứng chỉ.
+  EC2 LMS phải phân giải tên đó về IP private của DC và đi được TCP 636.
+  Giới hạn rule TCP 636 của DC ở security group của EC2 LMS. Lấy CA cấp
+  chứng chỉ LDAPS từ quản trị viên AD và lưu thành `certs/ad-ca.pem`.
+  Backend bind bằng tài khoản được nhập tại form.
+- **RDS**: Dùng MySQL database `lms` với schema trong
+  [backend/database/schema.sql](backend/database/schema.sql). Schema đã import
+  có thể dùng tiếp. Tài khoản ứng dụng chỉ cần quyền INSERT trên
+  `lms.login_history`. Cột `token_id` lưu UUID của lần đăng nhập và `user_oid`
+  lưu objectGUID chuẩn hóa của tài khoản AD.
+- **ALB**: Dùng listener HTTPS và target HTTP cổng 3001. Health check
+  `/api/config` kiểm tra ứng dụng đang phục vụ HTTP. Dùng cùng một
+  `SESSION_SECRET` cho mọi EC2 trong cùng Auto Scaling Group.
 
-Nút đăng nhập chỉ được bật khi các ID có định dạng hợp lệ. Trang chủ mở sau khi MSAL nhận được tài khoản Entra hoặc khôi phục phiên đăng nhập trong tab hiện tại. Lịch học, lịch thi, điểm thi và thông báo dùng dữ liệu mẫu.
+## Build và chạy trên EC2
 
-## Chạy
-
-```powershell
-npm ci
-npm run dev
+```bash
+mkdir -p certs
+curl -fsSLo certs/rds-ca.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+install -m 600 backend/.env.example backend/.env
+openssl rand -hex 32
+nano backend/.env
 ```
 
-Mở http://localhost:5173, bấm **Đăng nhập bằng Microsoft SSO**, rồi dùng tài khoản Microsoft 365 thuộc tenant đã cấu hình. Cho phép cửa sổ bật lên nếu trình duyệt chặn. Nếu sửa `.env.local`, khởi động lại Vite.
+Điền endpoint, tài khoản và mật khẩu MySQL. Kiểm tra `AD_URL` là tên DNS
+thật của DC, các biến `AD_*` khớp môi trường, rồi điền chuỗi ngẫu nhiên vào
+`SESSION_SECRET`. Đặt `FRONTEND_ORIGIN` theo URL HTTPS chính xác của web.
+Hai đường dẫn CA trong file môi trường là đường dẫn bên trong container.
 
-Chạy `npm run build` để tạo bản tĩnh trong `dist/`. Khi demo qua HTTPS trên AWS, thêm URI `https://TEN-MIEN/auth-callback.html` vào cùng cấu hình SPA và giữ cả hai tệp HTML khi triển khai.
+```bash
+docker build -t campus-lms:ad-rds .
+docker run -d --name lms --restart unless-stopped --env-file backend/.env \
+  --mount "type=bind,src=$PWD/certs,dst=/app/certs,readonly" \
+  -p 3001:3001 campus-lms:ad-rds
+curl -fsS http://localhost:3001/api/config
+```
 
-MSAL Browser dùng OpenID Connect Authorization Code với PKCE. `auth-callback.html` là trang kỹ thuật cho cửa sổ đăng nhập. Trang chủ hiển thị thông tin demo và không chứa dữ liệu học vụ riêng tư.
+Cho ALB tới port 3001 từ security group của ALB. Khi dùng Auto Scaling,
+đưa bước chạy container, nạp CA và lấy cấu hình qua IAM/Secrets Manager vào
+quy trình khởi tạo mỗi EC2. Giữ file môi trường và khóa phiên ngoài Git và image.
 
-## Ghi lịch sử đăng nhập vào RDS MySQL
+## Kiểm tra
 
-1. Trong cùng tenant Entra, tạo app registration cho API. Trong Manifest đặt `api.requestedAccessTokenVersion` thành `2`. Trong **Expose an API**, dùng Application ID URI `api://<API_CLIENT_ID>` và thêm delegated scope `Login.Record`. Trong app registration của SPA, vào **API permissions → Add a permission → My APIs**, chọn scope này và cấp consent theo chính sách tenant.
-2. Trong `.env.local`, đặt `VITE_ENTRA_API_CLIENT_ID` bằng Application (client) ID của API. Đặt `VITE_LOGIN_API_URL` bằng URL endpoint trên EC2, ví dụ `https://api.example.edu/api/login-history`. Khi chạy local dùng URL trong `.env.example`. Build lại frontend sau khi đổi cấu hình.
-3. Từ thư mục gốc trên EC2 (Bash), chạy `mysql -h YOUR_RDS_ENDPOINT -u YOUR_DB_ADMIN -p < backend/database/schema.sql` để thêm bảng vào database `lms` (MySQL 8.0.16+). Tài khoản chạy API cần quyền INSERT trên `lms.login_history`.
-4. Sao chép `backend/.env.example` thành `backend/.env`. Điền cấu hình MySQL, tenant ID, hai client ID tương ứng và `FRONTEND_ORIGIN` bằng origin chính xác của trang LMS. Với RDS, đặt `DB_SSL_CA` thành đường dẫn tới CA bundle của RDS. Từ thư mục `backend` chạy `npm ci`, sau đó `npm start`. Dùng HTTPS cho endpoint công khai trên AWS.
-5. Bấm đăng nhập. Backend xác minh access token và ghi mã người dùng Entra, username nếu có và thời điểm UTC trước khi trang chủ mở. Tải lại trang dùng phiên hiện tại. Kiểm tra trong MySQL:
+Mở URL HTTPS, thử tài khoản sai rồi đăng nhập với tài khoản CAMPUS hợp lệ.
+Sau lần đăng nhập hợp lệ, kiểm tra trên RDS:
 
 ```sql
-SELECT user_oid, username, logged_in_at
+SELECT username, logged_in_at
 FROM lms.login_history
 ORDER BY id DESC
-LIMIT 10;
+LIMIT 5;
 ```
-
-## EC2 + RDS với một Docker image
-
-Container phục vụ cả trang web và API trên cổng 3001. Ba client/tenant ID công khai được frontend đọc từ `/api/config` khi mở trang. Backend dùng thông tin RDS trong biến môi trường của container.
-
-Trên EC2 Ubuntu đã cài Docker, tạo file môi trường từ mẫu, giới hạn quyền đọc rồi điền các giá trị thật:
-
-```bash
-curl -fsSLo lms.env https://raw.githubusercontent.com/HuynhHoaAn-UIT/lms/main/backend/.env.example
-chmod 600 lms.env
-nano lms.env
-```
-
-Đặt `DB_HOST` bằng endpoint RDS, `DB_SSL_CA=/app/rds-ca.pem` và dùng tài khoản MySQL có quyền ghi bảng lịch sử. Kiểm tra schema đã được áp dụng theo mục RDS ở trên. Để demo qua SSH, đặt `FRONTEND_ORIGIN=http://localhost:3001` và thêm `http://localhost:3001/auth-callback.html` vào SPA redirect URI của Entra. Giữ nguyên delegated scope Login.Record của API.
-
-```bash
-curl -fsSLo rds-ca.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
-docker pull ghcr.io/huynhhoaan-uit/lms:main
-docker run -d --name lms --restart unless-stopped --env-file lms.env \
-  -v "$PWD/rds-ca.pem:/app/rds-ca.pem:ro" \
-  -p 127.0.0.1:3001:3001 ghcr.io/huynhhoaan-uit/lms:main
-curl -fsS http://127.0.0.1:3001/api/config
-```
-
-Nếu package private, đăng nhập GHCR bằng tài khoản có quyền đọc package và token được cấp `read:packages` qua `docker login ghcr.io` trước khi pull. Để cố định phiên bản, dùng tag là SHA đầy đủ của commit được publish.
-
-Trên PowerShell máy cá nhân, giữ phiên `ssh -i .\key.pem -L 3001:127.0.0.1:3001 ubuntu@EC2_HOST` rồi mở http://localhost:3001. Khi cung cấp trang công khai, dùng HTTPS reverse proxy trên EC2 chuyển tiếp về 127.0.0.1:3001, đặt FRONTEND_ORIGIN theo URL HTTPS, cập nhật URI callback trong Entra và tạo lại container với cấu hình mới.
-
-Để tự build từ thư mục gốc của repo, chạy `docker build -t campus-lms:local .` rồi dùng tên image đó ở lệnh run.
